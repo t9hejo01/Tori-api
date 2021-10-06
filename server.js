@@ -1,6 +1,5 @@
 const express = require('express')
 const app = express()
-const port = 3000
 const passport = require('passport');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');;
@@ -8,11 +7,16 @@ const productInfoJsonSchema = require('./schemas/productInformation.schema.json'
 const {request} = require('chai');
 const Ajv = require('ajv');
 
+app.set('port', (process.env.PORT || 80));
+
+var multer = require('multer');
+var cloudinary = require('cloudinary');
+var cloudinaryStorage = require('multer-cloudinary-storage');
+
 app.use(express.json());
 
 const jwt = require('jsonwebtoken');
 const JwtStrategy = require('passport-jwt').Strategy, ExtractJwt = require('passport-jwt').ExtractJwt;
-const { default: Ajv } = require('ajv');
 let jwtSecretKey = null;
 if (process.env.JWTKEY === undefined) {
     jwtSecretKey = require('./jwt-key.json').secret;
@@ -92,6 +96,19 @@ app.post('/products/:id', (req, res) => {
         deliveryType: req.body.deliveryType,
         sellerInfo: req.body.sellerInfo,
     })
+    var storage = cloudinaryStorage({
+        cloudinary: cloudinary,
+        folder: 'products',
+        allowedFormats: ['jpg', 'png'],
+    });
+
+    var parser = multer({ storage: storage});
+    app.post('/products', parser.single('image'), function (req, res) {
+        console.log(req.file);
+        res.status(201);
+        res.json(req.file);
+    })
+
     res.status(200).send("OK!");
 });
 
@@ -104,7 +121,7 @@ let serverInstance = null;
 module.exports = {
     start: () => {
         serverInstance = app.listen(port, () => {
-        console.log('Example app listening on port ${port}!')    
+        console.log('Node app is running on port ', app.get('port'));    
         })
     },
     close: () => {
